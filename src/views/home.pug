@@ -1,0 +1,19 @@
+doctype html
+html(lang="ko")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    link(rel="stylesheet", href="/public/css/mvp.css")
+    title Document
+  body 
+    header 
+      h1 👋 Welcome to meow's server
+    main 
+      div#MyStream
+        video#myFace(autoplay, playsinline width="400" height="400")  
+        button#mute mute
+        button#camera Trun Camera Off
+        select#cameras
+          option Test용 option
+    script(src="/socket.io/socket.io.js")
+    script(src="/public/js/app.js")
