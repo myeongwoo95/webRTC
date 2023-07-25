@@ -35,12 +35,30 @@ const io = new Server(httpServer, {
 
 instrument(io, {
   auth: false,
+});
 
-  // auth: {
-  //   type: "basic",
-  //   username: "admin",
-  //   password: "encrypted hash...",
-  // },
+io.on("connection", (socket) => {
+  /** 1. 모든 이벤트를 감지 */
+  socket.onAny((event) => {
+    console.log(`Socket Event: ${event}`);
+  });
+
+  /** 2. disconnecting */
+  socket.on("disconnecting", () => {
+    console.log("disconnecting");
+  });
+
+  /** 3. disconnect */
+  socket.on("disconnect", () => {
+    console.log("disconnect");
+  });
+
+  // 방 입장
+  socket.on("join_room", (data, done) => {
+    socket.join(data.roomName);
+    done();
+    socket.to(data.roomName).emit("welcome");
+  });
 });
 
 httpServer.listen(port, () => {
