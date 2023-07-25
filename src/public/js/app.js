@@ -116,10 +116,11 @@ async function handleCameraChange() {
 const welcome = document.querySelector("#welcome");
 const welcomeForm = welcome.querySelector("form");
 
-function startMedia() {
+async function startMedia() {
   welcome.hidden = true;
   call.hidden = false;
-  getMedia();
+  await getMedia();
+  makeConnection();
 }
 
 function handleWelcomeSubmit(event) {
@@ -132,7 +133,52 @@ function handleWelcomeSubmit(event) {
 
 welcomeForm.addEventListener("submit", handleWelcomeSubmit);
 
-/** 누군가 방 입장 */
-socket.on("welcome", () => {
-  console.log("somebody join");
+/**
+ * B가 방 입장하면 A 브라우저에서 동작하는 함수
+ * A유저가 이 방을 만들었고 B유저가 들어오면 A유저 브라우저에서만 동작되는 함수로
+ * offer()와 setLocalDescription()가 여기서 실행된다.
+ * */
+socket.on("welcome", async () => {
+  // offer를 출력해보면 sdp키의 value로 이상하고 긴 text가 잇는데 간단히 말하면 초대장같은것이다.
+  const offer = await myPeerConnection.createOffer();
+  myPeerConnection.setLocalDescription(offer);
+  console.log("sent the offer");
+  socket.emit("offer", {
+    roomName,
+    offer,
+  });
 });
+
+/**
+ * 위에서 A 브라우저가 weclome을 함수를 동작시키면서 offer를 emit하고 서버에서 emit함수를 구현하면서
+ * socket.to(room).emit("offer")를 emit하고 브라우저에서 구현하고 이 구현된 offer는 B 브라우저에서만 동작함
+ */
+
+socket.on("offer", (data) => {
+  console.log("receive an offer", data.offer);
+});
+
+/**
+  WebRTC P2P 통신 시나리오
+  1. 두 개의 웹 브라우저가 각각 서로 다른 브라우저 창에서 실행됩니다.
+  2. 각 클라이언트는 WebRTC API를 사용하여 자신의 미디어 스트림(영상, 오디오 등)을 생성합니다
+  3. 그리고 RTCPeerConnection 객체를 생성합니다.
+  4. 그런 다음, 두 클라이언트 간에 Offer와 Answer를 교환하여 P2P 연결을 설정합니다. // SDP(Session Description Protocol)
+  P2P 연결 설정 후, 두 클라이언트는 비디오, 오디오 및 데이터를 주고받을 수 있게 됩니다.
+  5. 통신이 끝나면 연결을 종료하고 RTCPeerConnection을 닫습니다.
+**/
+let myPeerConnection;
+
+// makeConnection() 함수를 호출하여 myStream에 있는 미디어 트랙들을 myPeerConnection 객체에 추가합니다.
+function makeConnection() {
+  // RTCPeerConnection은 두 개의 웹 브라우저(peer) 간에 통신을 설정하고 관리하는 중요한 객체입니다.
+  // RTCPeerConnection은 비디오, 오디오 및 데이터 스트림을 주고받는 데 사용됩니다.
+  // 이렇게 생성된 peerConnection 객체를 통해 Offers, Answers, IceCandidate, Data Channels 등을 설정하고
+  // 관리하여 실제 P2P 통신을 구현할 수 있게 됩니다.
+  myPeerConnection = new RTCPeerConnection();
+
+  // myStream에 있는 각 미디어 트랙을(video, audio) myPeerConnection 객체에 추가합니다.
+  myStream.getTracks().forEach((track) => {
+    myPeerConnection.addTrack(track, myStream);
+  });
+}

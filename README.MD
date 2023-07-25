@@ -15,24 +15,33 @@
 - 서버는 그 정보를 다른 브라우저에게 전달해준다.
 - webRTC로 보낼 수 있는 정보는 영상, 오디오, 텍스트이다.
 - webRTC 개념들: Rooms, Offers, Answers, IceCandidate, Senders, STUN, Data Channels
-- room은 소켓에서 배웟던 방 개념이다
-- room은 시그널링을 하기 위해 유저간 서로의 존재를 알려주기 위해 존재한다.
-- A가 방을 만들고 B가 그 방을 들어가면 A가 신호를 받고 시그널링이 시작된다.
+
+##### room
+
+- room은 socket.io의 그 room이다.
+- socket.io의 room이 필요한 이유는 시그널링을 하기 위해 즉 유저가 offer를 보내고 offer를 받고 answer를 보내기위한 용도이다.
+- A가 방을 만들고 B가 그 방을 들어가면 A가 신호를 받고 거기서부터 시그널링이 시작된다.
+
+##### offer
+
+- 1. getUserMedia()
+- 2. addStream()[deprecated]
+     RTCPeerConnection() // 스트림에서 비디오 오디오 트랙을 RTCPeerConnection 객체에 넣어준다. 파라미터는 track과 stream
+- 3. createOffer(), createAnswer() // 한쪽이 createOffer 하는데 주체가 누구냐면 방을 먼저 만든 A유저이다. B유저가 들어오면 A유저한테
+     알람이 가는데 그 알람은 서버에서 emit한 "welcome"이다. 여기에다 createOffer()를 구현해준다. 참고로 여기에서 setLocalDescription()도 실행한다.
+- 4. setLocalDescription()
+     addStream()을 하기전에 양쪽 브라우저에 RTC 연결을 만들어야한다.
+     중요한점은 이 연결들이 따로 설정이 이뤄지고, 그 설정들을 socket.IO를 통해서 이어준다.
+
+- 정리하면
+- 1. A유저가 하얀 방을 생성하고 그 방에 들어감
+- 2. B유저가 하얀방에 들어감
+- 3. A유저 브라우저에서 socket.on("welcome")이 실행됨, 거기서 offer를 emit하면서 offer를 서버에 보냄
+- 4. 서버에서는 socket.on("offer")가 동작하고, 그 안에서 socket.to("하얀방").emit("offer")를 하면서 offer를 B 유저에게 보냄
+- 5. B유저 브라우저에서는 socket.on("offer")가 동작하면서 A가 보낸 offer를 받게됨
 
 <pre>
-Rooms: WebRTC에서 여러 사용자가 실시간으로 연결되는 단위를 나타냅니다. 각 방(Room)은 특정 주제 또는 목적에 따라 사용자들이 모여 있는 공간으로 생각할 수 있습니다. 방을 통해 특정 그룹 간의 통신을 구성할 수 있습니다.
 
-Offers: WebRTC 통신을 시작하기 위해 발신측(peer)이 수신측(peer)에게 통신을 시작하고자 하는 의도와 기능(비디오, 오디오 등)에 대한 제안을 보내는 메시지입니다.
-
-Answers: 수신측(peer)이 발신측(peer)에게 Offer에 대한 응답으로 보내는 메시지입니다. Offer에서 제안된 기능을 수락하거나 추가 제안을 할 수 있습니다.
-
-IceCandidate: WebRTC에서 피어 간의 연결을 설정하는 데 사용되는 네트워크 정보입니다. 브라우저들은 서로의 주소 및 포트 정보를 수집하고 교환하여 연결을 수립하게 됩니다.
-
-Senders: WebRTC에서 비디오, 오디오 등의 미디어 스트림을 전송하는 객체를 나타냅니다. Senders를 사용하여 미디어 스트림을 다른 피어에게 전송합니다.
-
-STUN (Session Traversal Utilities for NAT): WebRTC에서 P2P 통신을 위해 사용되는 네트워크 주소 변환(NAT)과 방화벽 트래버설을 지원하는 서버입니다. 이 서버를 통해 브라우저는 자신의 공인 IP 주소와 포트를 확인하여 연결을 수립하는데 도움을 받습니다.
-
-Data Channels: WebRTC에서 피어 간에 데이터를 교환하기 위한 양방향 데이터 채널을 말합니다. Data Channels은 비디오/오디오 스트림과는 별도로 사용되며, 실시간 채팅이나 파일 전송과 같은 데이터 교환에 사용됩니다.
 
 </pre>
 

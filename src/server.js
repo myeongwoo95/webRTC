@@ -59,6 +59,12 @@ io.on("connection", (socket) => {
     done();
     socket.to(data.roomName).emit("welcome");
   });
+
+  socket.on("offer", (data) => {
+    socket.to(data.roomName).emit("offer", {
+      offer: data.offer,
+    });
+  });
 });
 
 httpServer.listen(port, () => {
