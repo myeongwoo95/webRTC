@@ -40,11 +40,6 @@
 - 4. 서버에서는 socket.on("offer")가 동작하고, 그 안에서 socket.to("하얀방").emit("offer")를 하면서 offer를 B 유저에게 보냄
 - 5. B유저 브라우저에서는 socket.on("offer")가 동작하면서 A가 보낸 offer를 받게됨
 
-<pre>
-
-
-</pre>
-
 ##### TODO
 
 - 영상, 오디오, 채팅을 구현하고 두 사람을 위한 임시 파일 서버에 파일업로드를 할수있게 한 후에
