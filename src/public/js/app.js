@@ -1,5 +1,6 @@
 const socket = io();
 
+let myPeerConnection;
 let myStream;
 let muted = false;
 let cameraOff = false;
@@ -52,6 +53,8 @@ async function getMedia(deviceId) {
   // 초기에 유저가 카메라를 선택하지 않은 상황에서 사용되고
   const initialConstrains = {
     audio: true,
+
+    //facingMode가 "user"이면 전면카메라, "environment"면 후면카메라이다. (휴대폰인 경우에만)
     video: { facingMode: "user" },
   };
 
@@ -116,17 +119,25 @@ async function handleCameraChange() {
 const welcome = document.querySelector("#welcome");
 const welcomeForm = welcome.querySelector("form");
 
-async function startMedia() {
+async function initCall() {
   welcome.hidden = true;
   call.hidden = false;
   await getMedia();
   makeConnection();
 }
 
-function handleWelcomeSubmit(event) {
+async function handleWelcomeSubmit(event) {
   event.preventDefault();
   const input = welcomeForm.querySelector("input");
-  socket.emit("join_room", { roomName: input.value }, startMedia);
+
+  // initCall에서 media를 가져오는 속도나 연결을 만드는 속도보다
+  // socket.io의 속도가 훨씬 빨라서 A가 보낸 offer를 B에서 처리하지 못한다.
+  // B 브라우저는 서버에서 offer를 주면 socket.on("offer")에서 다음 코드가 실행되는데
+  // myPeerConnection.setRemoteDescription(data.offer);
+  // myPeerConnection is undefined에러가 발생한다. 따라서
+  // initCall를 먼저 실행하고 join_room을 실행야한다.
+  await initCall();
+  socket.emit("join_room", { roomName: input.value });
   roomName = input.value;
   input.value = "";
 }
@@ -134,6 +145,7 @@ function handleWelcomeSubmit(event) {
 welcomeForm.addEventListener("submit", handleWelcomeSubmit);
 
 /**
+ * (A 브라우저)
  * B가 방 입장하면 A 브라우저에서 동작하는 함수
  * A유저가 이 방을 만들었고 B유저가 들어오면 A유저 브라우저에서만 동작되는 함수로
  * offer()와 setLocalDescription()가 여기서 실행된다.
@@ -142,32 +154,37 @@ socket.on("welcome", async () => {
   // offer를 출력해보면 sdp키의 value로 이상하고 긴 text가 잇는데 간단히 말하면 초대장같은것이다.
   const offer = await myPeerConnection.createOffer();
   myPeerConnection.setLocalDescription(offer);
+  socket.emit("offer", { roomName, offer });
   console.log("sent the offer");
-  socket.emit("offer", {
-    roomName,
-    offer,
-  });
 });
 
 /**
+ * (B 브라우저)
  * 위에서 A 브라우저가 weclome을 함수를 동작시키면서 offer를 emit하고 서버에서 emit함수를 구현하면서
  * socket.to(room).emit("offer")를 emit하고 브라우저에서 구현하고 이 구현된 offer는 B 브라우저에서만 동작함
  */
-
-socket.on("offer", (data) => {
-  console.log("receive an offer", data.offer);
+socket.on("offer", async (data) => {
+  myPeerConnection.setRemoteDescription(data.offer);
+  const answer = await myPeerConnection.createAnswer();
+  myPeerConnection.setLocalDescription(answer);
+  socket.emit("answer", { answer, roomName });
+  console.log("sent the answer");
 });
 
 /**
-  WebRTC P2P 통신 시나리오
-  1. 두 개의 웹 브라우저가 각각 서로 다른 브라우저 창에서 실행됩니다.
-  2. 각 클라이언트는 WebRTC API를 사용하여 자신의 미디어 스트림(영상, 오디오 등)을 생성합니다
-  3. 그리고 RTCPeerConnection 객체를 생성합니다.
-  4. 그런 다음, 두 클라이언트 간에 Offer와 Answer를 교환하여 P2P 연결을 설정합니다. // SDP(Session Description Protocol)
-  P2P 연결 설정 후, 두 클라이언트는 비디오, 오디오 및 데이터를 주고받을 수 있게 됩니다.
-  5. 통신이 끝나면 연결을 종료하고 RTCPeerConnection을 닫습니다.
-**/
-let myPeerConnection;
+ * (A 브라우저)
+ * A의 offer를 받은 B는 answer를 생성하고 소켓 서버에 보낸다.
+ * 서버는 B의 answer를 다시 A유저에게 보낸다.
+ */
+socket.on("answer", (data) => {
+  console.log("recevied the offer");
+  myPeerConnection.setRemoteDescription(data.answer);
+});
+
+socket.on("ice", (data) => {
+  console.log("received candidate");
+  myPeerConnection.addIceCandidate(data.ice);
+});
 
 // makeConnection() 함수를 호출하여 myStream에 있는 미디어 트랙들을 myPeerConnection 객체에 추가합니다.
 function makeConnection() {
@@ -176,6 +193,16 @@ function makeConnection() {
   // 이렇게 생성된 peerConnection 객체를 통해 Offers, Answers, IceCandidate, Data Channels 등을 설정하고
   // 관리하여 실제 P2P 통신을 구현할 수 있게 됩니다.
   myPeerConnection = new RTCPeerConnection();
+
+  // candidate
+  myPeerConnection.addEventListener("icecandidate", (data) => {
+    socket.emit("ice", { candidate: data.candidate, roomName });
+  });
+
+  // addStream
+  myPeerConnection.addEventListener("addstream", (data) => {
+    console.log(data.stream);
+  });
 
   // myStream에 있는 각 미디어 트랙을(video, audio) myPeerConnection 객체에 추가합니다.
   myStream.getTracks().forEach((track) => {

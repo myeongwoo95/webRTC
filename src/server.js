@@ -38,31 +38,38 @@ instrument(io, {
 });
 
 io.on("connection", (socket) => {
-  /** 1. 모든 이벤트를 감지 */
   socket.onAny((event) => {
     console.log(`Socket Event: ${event}`);
   });
 
-  /** 2. disconnecting */
   socket.on("disconnecting", () => {
     console.log("disconnecting");
   });
 
-  /** 3. disconnect */
   socket.on("disconnect", () => {
     console.log("disconnect");
   });
 
-  // 방 입장
-  socket.on("join_room", (data, done) => {
+  socket.on("join_room", (data) => {
     socket.join(data.roomName);
-    done();
     socket.to(data.roomName).emit("welcome");
   });
 
   socket.on("offer", (data) => {
     socket.to(data.roomName).emit("offer", {
       offer: data.offer,
+    });
+  });
+
+  socket.on("answer", (data) => {
+    socket.to(data.roomName).emit("answer", {
+      answer: data.answer,
+    });
+  });
+
+  socket.on("ice", (data) => {
+    socket.to(data.roomName).emit("ice", {
+      ice: data.ice,
     });
   });
 });
