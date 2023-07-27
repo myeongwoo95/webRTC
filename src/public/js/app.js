@@ -53,25 +53,24 @@ async function getMedia(deviceId) {
   // 초기에 유저가 카메라를 선택하지 않은 상황에서 사용되고
   const initialConstrains = {
     audio: true,
-
     //facingMode가 "user"이면 전면카메라, "environment"면 후면카메라이다. (휴대폰인 경우에만)
     video: { facingMode: "user" },
   };
 
-  // 유저가 특정 카메라를 선택한다면 이것을 사용하는데 특정 카메라를 사용한다는 의미이다.
+  // 유저가 특정 카메라를 선택한다면 이 객체를 사용한다.
   const cameraConstrains = {
     audio: true,
     video: { deviceId: { exact: "myExactCameraOrBustDeviceId" } },
   };
 
   try {
-    // 스트림을 얻는다. (오디오와 비디오 트랙)
-    // 브라우저가 사용자에게 카메라와 오디오의 접근 요구한다.
+    // deviceId가 있다면 (유저가 카메라를 선택했다면) cameraConstrains, 없다면 initialConstrains를 객체로 스트림을 얻는다.
+    // 참고로 이 로직이 동작되면 브라우저가 사용자에게 카메라와 오디오의 접근허용을 요구한다.
     myStream = await navigator.mediaDevices.getUserMedia(
       deviceId ? cameraConstrains : initialConstrains
     );
 
-    // myFace는 HTML video인데 srcObject 속성에 스트림 객체 넣어줌으로써, video 태그와 스트림 객체를 연결한다.
+    // video태그 srcObject속성에 스트림 객체 넣어준다.(연결해준다.)
     myFace.srcObject = myStream;
 
     // 사용자 카메라를 HTML에 select으로 그려주기
@@ -113,6 +112,11 @@ function handleCameraBtnClick() {
 
 async function handleCameraChange() {
   await getMedia(camerasSelect.value);
+
+  // 카메라를 변경할 때 stream을 통째로 바꿔버리는데, 상대 유저에게 보내는 track은 바꾸지않고있다.
+  if (myPeerConnection) {
+    console.log(myPeerConnection.getS);
+  }
 }
 
 /** 방 생성 및 입장 */
