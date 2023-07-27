@@ -20,8 +20,7 @@ html(lang="ko")
           button#mute mute
           button#camera Trun Camera Off
           select#cameras
-            option Test용 option
-        div#peersStream
+          video#peerFace(autoplay, playsinline width="400" height="400")  
             
     script(src="/socket.io/socket.io.js")
     script(src="/public/js/app.js")

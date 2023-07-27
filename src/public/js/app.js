@@ -194,18 +194,21 @@ function makeConnection() {
   // 관리하여 실제 P2P 통신을 구현할 수 있게 됩니다.
   myPeerConnection = new RTCPeerConnection();
 
-  // candidate
-  myPeerConnection.addEventListener("icecandidate", (data) => {
-    socket.emit("ice", { candidate: data.candidate, roomName });
-  });
-
-  // addStream
-  myPeerConnection.addEventListener("addstream", (data) => {
-    console.log(data.stream);
-  });
+  myPeerConnection.addEventListener("icecandidate", handleIce);
+  myPeerConnection.addEventListener("addstream", handleAddStream);
 
   // myStream에 있는 각 미디어 트랙을(video, audio) myPeerConnection 객체에 추가합니다.
   myStream.getTracks().forEach((track) => {
     myPeerConnection.addTrack(track, myStream);
   });
+}
+
+function handleIce(data) {
+  console.log("sent candidate");
+  socket.emit("ice", { ice: data.candidate, roomName });
+}
+
+function handleAddStream(data) {
+  const peerFace = document.getElementById("peerFace");
+  peerFace.srcObject = data.stream;
 }
