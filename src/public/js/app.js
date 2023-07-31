@@ -46,6 +46,7 @@ async function getCameras() {
   }
 }
 
+// Stream을 만드는 함수이다.
 // 파라미터 deviceId는 카메라 ID이다.
 // 이 함수는 최초에 파라미터 값 deviceId 없이 바로 실행되는 함수이다.
 async function getMedia(deviceId) {
@@ -111,11 +112,18 @@ function handleCameraBtnClick() {
 }
 
 async function handleCameraChange() {
+  // stream을 통째로 변경
   await getMedia(camerasSelect.value);
 
   // 카메라를 변경할 때 stream을 통째로 바꿔버리는데, 상대 유저에게 보내는 track은 바꾸지않고있다.
+  // 상대방에게 보내는 track을 교체해줘야 상대방이 확인 가능하다.
+  // RTCPeerConnection객체의 getSenders() 메서드는 상대방 에게 보내지는 미디어 스트림 track을 컨트롤할 수 있게 해준다.
   if (myPeerConnection) {
-    console.log(myPeerConnection.getS);
+    const videoTrack = myStream.getVideoTracks()[0];
+    const videoSender = myPeerConnection
+      .getSenders()
+      .find((sender) => sender.track.kind === "video");
+    videoSender.replaceTrack(videoTrack);
   }
 }
 
@@ -196,7 +204,20 @@ function makeConnection() {
   // RTCPeerConnection은 비디오, 오디오 및 데이터 스트림을 주고받는 데 사용됩니다.
   // 이렇게 생성된 peerConnection 객체를 통해 Offers, Answers, IceCandidate, Data Channels 등을 설정하고
   // 관리하여 실제 P2P 통신을 구현할 수 있게 됩니다.
-  myPeerConnection = new RTCPeerConnection();
+  // RTCPeerConnection에 들어가는 객체는 구글이 제공하는 무료 STUN 서버 list 목록이다.
+  myPeerConnection = new RTCPeerConnection({
+    iceServers: [
+      {
+        urls: [
+          "stun:stun.l.google.com:19302",
+          "stun:stun1.l.google.com:19302",
+          "stun:stun2.l.google.com:19302",
+          "stun:stun3.l.google.com:19302",
+          "stun:stun4.l.google.com:19302",
+        ],
+      },
+    ],
+  });
 
   myPeerConnection.addEventListener("icecandidate", handleIce);
   myPeerConnection.addEventListener("addstream", handleAddStream);
