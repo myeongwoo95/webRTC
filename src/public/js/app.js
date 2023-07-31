@@ -36,7 +36,7 @@ async function getCameras() {
       const option = document.createElement("option");
       option.value = camera.deviceId;
       option.innerText = camera.label;
-      if (currentCamera.label == camera.label) {
+      if (currentCamera.label === camera.label) {
         option.selected = true;
       }
       camerasSelect.appendChild(option);
@@ -52,23 +52,23 @@ async function getCameras() {
 async function getMedia(deviceId) {
   // 미디어 스트림을 요청할 때 사용하는 초기 제약 조건으로
   // 초기에 유저가 카메라를 선택하지 않은 상황에서 사용되고
-  const initialConstrains = {
+  const initialConstraints = {
     audio: true,
     //facingMode가 "user"이면 전면카메라, "environment"면 후면카메라이다. (휴대폰인 경우에만)
     video: { facingMode: "user" },
   };
 
   // 유저가 특정 카메라를 선택한다면 이 객체를 사용한다.
-  const cameraConstrains = {
+  const cameraConstraints = {
     audio: true,
-    video: { deviceId: { exact: "myExactCameraOrBustDeviceId" } },
+    video: { deviceId: { exact: deviceId } },
   };
 
   try {
     // deviceId가 있다면 (유저가 카메라를 선택했다면) cameraConstrains, 없다면 initialConstrains를 객체로 스트림을 얻는다.
     // 참고로 이 로직이 동작되면 브라우저가 사용자에게 카메라와 오디오의 접근허용을 요구한다.
     myStream = await navigator.mediaDevices.getUserMedia(
-      deviceId ? cameraConstrains : initialConstrains
+      deviceId ? cameraConstraints : initialConstraints
     );
 
     // video태그 srcObject속성에 스트림 객체 넣어준다.(연결해준다.)
@@ -112,7 +112,6 @@ function handleCameraBtnClick() {
 }
 
 async function handleCameraChange() {
-  // stream을 통째로 변경
   await getMedia(camerasSelect.value);
 
   // 카메라를 변경할 때 stream을 통째로 바꿔버리는데, 상대 유저에게 보내는 track은 바꾸지않고있다.
