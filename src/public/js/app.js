@@ -5,6 +5,7 @@ let myStream;
 let muted = false;
 let cameraOff = false;
 let roomName;
+let myDataChannel;
 
 const call = document.querySelector("#call"); // call div 태그
 const myFace = document.querySelector("#myFace"); // video 태그
@@ -162,6 +163,14 @@ welcomeForm.addEventListener("submit", handleWelcomeSubmit);
  * offer()와 setLocalDescription()가 여기서 실행된다.
  * */
 socket.on("welcome", async () => {
+  // offer를 보내는 곳이 데이터 채널을 만드는 주체로 chat이라는 데이터 채널을 생성
+  myDataChannel = myPeerConnection.createDataChannel("chat");
+
+  // 상대방이 myDataChannel.send("hello") 이런식으로 보내면 수신하는 이벤트
+  myDataChannel.addEventListener("message", (event) => {
+    console.log("msg", event.data);
+  });
+
   // offer를 출력해보면 sdp키의 value로 이상하고 긴 text가 잇는데 간단히 말하면 초대장같은것이다.
   const offer = await myPeerConnection.createOffer();
   myPeerConnection.setLocalDescription(offer);
@@ -175,6 +184,16 @@ socket.on("welcome", async () => {
  * socket.to(room).emit("offer")를 emit하고 브라우저에서 구현하고 이 구현된 offer는 B 브라우저에서만 동작함
  */
 socket.on("offer", async (data) => {
+  // offer를 보낸 쪽에서 이미 데이터 채널을 만들었기 때문에 B는 eventLister만 달아주면된다.
+  myPeerConnection.addEventListener("datachannel", (event) => {
+    myDataChannel = event.channel;
+
+    // 상대방이 myDataChannel.send("hello") 이런식으로 보내면 수신하는 이벤트
+    myDataChannel.addEventListener("message", (event) => {
+      console.log("msg", event.data);
+    });
+  });
+
   myPeerConnection.setRemoteDescription(data.offer);
   const answer = await myPeerConnection.createAnswer();
   myPeerConnection.setLocalDescription(answer);
